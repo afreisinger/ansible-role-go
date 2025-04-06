@@ -1,3 +1,9 @@
+---
+- name: Set default go_url_base if not defined
+  ansible.builtin.set_fact:
+    go_url_base: >-
+      {{ "https://go.dev/dl" if go_version == "latest" else "https://dl.google.com/go" }}
+
 - name: Fetch latest Go version from website
   ansible.builtin.shell: |
     curl -s https://go.dev/dl/ | grep -oP 'go\K[0-9]+\.[0-9]+\.[0-9]+' | head -n 1
@@ -12,37 +18,61 @@
     go_version: "{{ go_version_output.stdout }}"
   when: go_version == "latest"
 
-- name: Show version to be installed
-  ansible.builtin.debug:
-    msg: "Installing Go version: {{ go_version }}"
+- name: Set Go tarball and download URL
+  ansible.builtin.set_fact:
+    go_tarball: "go{{ go_version }}.{{ go_platform }}-{{ go_arch }}.tar.gz"
+    go_download_url: "{{ go_url_base }}/{{ go_tarball }}"
 
-- name: Check current Go installation
-  ansible.builtin.stat:
-    path: "{{ go_install_dir }}/go/bin/go"
-  register: go_install_stat
-
-- name: Get installed Go version
-  ansible.builtin.command: "{{ go_install_dir }}/go/bin/go version"
-  register: installed_go_version
+- name: Check if Go is already installed.
+  command: /usr/local/go/bin/go version
+  ignore_errors: true
+  register: go_version_result
   changed_when: false
-  failed_when: false
-  when: go_install_stat.stat.exists
 
-- name: Download and install Go {{ go_version }}
-  ansible.builtin.unarchive:
-    src: "{{ go_url_base }}/go{{ go_version }}.linux-amd64.tar.gz"
-    dest: "{{ go_install_dir }}"
-    remote_src: yes
-    mode: '0755'
-  become: yes
-  when: >
-    not go_install_stat.stat.exists or
-    (installed_go_version.stdout is defined and go_version not in installed_go_version.stdout)
+- name: Remove current installation.
+  become: true
+  file:
+    state: absent
+    path: /usr/local/go
+  when:
+    - go_version_result is succeeded
+    - go_version not in go_version_result.stdout
+
+- name: Download Go
+  become: true
+  get_url:
+    url: "{{ go_download_url }}"
+    dest: /usr/local/src/{{ go_tarball }}
+    checksum: "{{ 'sha256:' + go_checksum if go_checksum | length > 0 else omit }}"
+  when:
+    go_version_result is failed or
+    go_version not in go_version_result.stdout
+
+- name: Extract Go.
+  become: true
+  unarchive:
+    src: /usr/local/src/{{ go_tarball }}
+    dest: /usr/local
+    copy: no
+  when:
+    go_version_result is failed or
+    go_version not in go_version_result.stdout
   notify: Notify go installed
 
-- name: Ensure Go bin path in /etc/profile
-  ansible.builtin.lineinfile:
-    path: /etc/profile
-    line: 'export PATH=$PATH:{{ go_bin_path }}'
+- name: Show Go version installed
+  become: true
+  command: /usr/local/go/bin/go version
+  register: go_version_output
+  changed_when: false
+
+- name: Print Go version
+  debug:
+    msg: "✅ Go installed version: {{ go_version_output.stdout }}"
+
+- name: Ensure Go bin path is in /etc/profile.d/go-path.sh
+  become: true
+  lineinfile:
+    path: /etc/profile.d/go-path.sh
+    line: 'export PATH=$PATH:/usr/local/go/bin'
+    create: yes
     state: present
-  become: yes

@@ -1,3 +1,3 @@
 # vars file for go
 ---
-go_url_base: "https://go.dev/dl"
+#go_url_base: "https://dl.google.com/go"
