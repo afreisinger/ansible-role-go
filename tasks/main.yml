@@ -24,14 +24,14 @@
     go_download_url: "{{ go_url_base }}/{{ go_tarball }}"
 
 - name: Check if Go is already installed.
-  command: /usr/local/go/bin/go version
+  ansible.builtin.command: /usr/local/go/bin/go version
   ignore_errors: true
   register: go_version_result
   changed_when: false
 
 - name: Remove current installation.
   become: true
-  file:
+  ansible.builtin.file:
     state: absent
     path: /usr/local/go
   when:
@@ -40,17 +40,18 @@
 
 - name: Download Go
   become: true
-  get_url:
+  ansible.builtin.get_url:
     url: "{{ go_download_url }}"
     dest: /usr/local/src/{{ go_tarball }}
     checksum: "{{ 'sha256:' + go_checksum if go_checksum | length > 0 else omit }}"
+    mode: '0644'
   when:
     go_version_result is failed or
     go_version not in go_version_result.stdout
 
 - name: Extract Go.
   become: true
-  unarchive:
+  ansible.builtin.unarchive:
     src: /usr/local/src/{{ go_tarball }}
     dest: /usr/local
     copy: no
@@ -61,18 +62,19 @@
 
 - name: Show Go version installed
   become: true
-  command: /usr/local/go/bin/go version
+  ansible.builtin.command: /usr/local/go/bin/go version
   register: go_version_output
   changed_when: false
 
 - name: Print Go version
-  debug:
+  ansible.builtin.debug:
     msg: "✅ Go installed version: {{ go_version_output.stdout }}"
 
 - name: Ensure Go bin path is in /etc/profile.d/go-path.sh
   become: true
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/profile.d/go-path.sh
     line: 'export PATH=$PATH:/usr/local/go/bin'
     create: yes
     state: present
+    mode: '0644'
