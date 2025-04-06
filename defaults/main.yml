@@ -1,0 +1,6 @@
+---
+# defaults file for go
+go_version: "latest"
+go_install_dir: "/usr/local"
+go_tarball_path: "/tmp/go.tar.gz"
+go_bin_path: "/usr/local/go/bin"

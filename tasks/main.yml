@@ -1,0 +1,48 @@
+- name: Fetch latest Go version from website
+  ansible.builtin.shell: |
+    curl -s https://go.dev/dl/ | grep -oP 'go\K[0-9]+\.[0-9]+\.[0-9]+' | head -n 1
+  register: go_version_output
+  changed_when: false
+  when: go_version == "latest"
+  args:
+    executable: /bin/bash
+
+- name: Set the fetched Go version
+  ansible.builtin.set_fact:
+    go_version: "{{ go_version_output.stdout }}"
+  when: go_version == "latest"
+
+- name: Show version to be installed
+  ansible.builtin.debug:
+    msg: "Installing Go version: {{ go_version }}"
+
+- name: Check current Go installation
+  ansible.builtin.stat:
+    path: "{{ go_install_dir }}/go/bin/go"
+  register: go_install_stat
+
+- name: Get installed Go version
+  ansible.builtin.command: "{{ go_install_dir }}/go/bin/go version"
+  register: installed_go_version
+  changed_when: false
+  failed_when: false
+  when: go_install_stat.stat.exists
+
+- name: Download and install Go {{ go_version }}
+  ansible.builtin.unarchive:
+    src: "{{ go_url_base }}/go{{ go_version }}.linux-amd64.tar.gz"
+    dest: "{{ go_install_dir }}"
+    remote_src: yes
+    mode: '0755'
+  become: yes
+  when: >
+    not go_install_stat.stat.exists or
+    (installed_go_version.stdout is defined and go_version not in installed_go_version.stdout)
+  notify: Notify go installed
+
+- name: Ensure Go bin path in /etc/profile
+  ansible.builtin.lineinfile:
+    path: /etc/profile
+    line: 'export PATH=$PATH:{{ go_bin_path }}'
+    state: present
+  become: yes

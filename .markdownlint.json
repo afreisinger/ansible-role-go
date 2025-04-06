@@ -1,0 +1,5 @@
+{
+    "default": true,
+    "MD013": false, // This rule is triggered when there are lines that are longer than the configured line_length (default: 80 characters)
+    "MD033": false // This rule is triggered whenever raw HTML is used in a Markdown document
+}  

@@ -1,0 +1,5 @@
+# handlers file for go
+---
+- name: Notify go installed
+  ansible.builtin.debug:
+    msg: "🔔 Go was installed or upgraded."

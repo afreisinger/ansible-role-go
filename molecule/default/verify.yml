@@ -1,0 +1,20 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify Go installation
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check if Go is installed
+      ansible.builtin.shell: |
+        /usr/local/go/bin/go version
+      register: go_version_result
+      changed_when: false
+
+    - name: Assert that Go is installed and version is reported
+      ansible.builtin.assert:
+        that:
+          - go_version_result.rc == 0
+          - "'go1' in go_version_result.stdout"
+        fail_msg: "Go is not installed or not functioning correctly"
+        success_msg: "Go is installed and working correctly"

@@ -1,0 +1,26 @@
+---
+dependencies: []
+
+galaxy_info:
+  namespace: afreisinger
+  role_name: go
+  author: Adrián Freisinger
+  description: Go installation for UNIX/Linux.
+  company: "Adrián Freisinger"
+  license: "license (BSD, MIT)"
+  min_ansible_version: "2.10"
+  platforms:
+    - name: GenericUNIX
+      versions:
+        - all
+    - name: GenericBSD
+      versions:
+        - all
+    - name: GenericLinux
+      versions:
+        - all
+  galaxy_tags:
+    - go
+    - golang
+    - development
+    - configuration
